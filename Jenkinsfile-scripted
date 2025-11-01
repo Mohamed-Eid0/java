@@ -1,0 +1,51 @@
+node {
+    def IMAGE_NAME = "mohamedeid/java-app"
+    def BUILD_TAG = "${env.BUILD_NUMBER}"
+
+    stage('Checkout') {
+        git branch: 'main', url: 'https://github.com/Hassan-Eid-Hassan/python-iti.git'
+    }
+
+    stage('Build') {
+        echo "Build Number: ${BUILD_TAG}"
+        if (BUILD_TAG.toInteger() < 1) {
+            error("Invalid build number: ${BUILD_TAG}")
+        }
+        sh "mvn clean package -DskipTests"
+    }
+
+    stage('Docker Build') {
+        sh "docker build -t ${IMAGE_NAME}:${BUILD_TAG} ."
+    }
+
+    stage('Docker Login') {
+        withCredentials([string(credentialsId: 'dockerhub-pass', variable: 'DOCKERHUB_PASS')]) {
+            sh "echo $DOCKERHUB_PASS | docker login -u mohamedeid --password-stdin"
+        }
+    }
+
+    stage('Docker Push') {
+        sh "docker push ${IMAGE_NAME}:${BUILD_TAG}"
+    }
+
+    stage('Deploy') {
+        sh """
+        echo "Deploying..."
+        docker stop java-app || true
+        docker rm java-app || true
+        docker run -d -p 9000:8080 --name java-app ${IMAGE_NAME}:${BUILD_TAG}
+        echo "Deployed successfully at http://localhost:9000"
+        """
+    }
+
+    stage('Post') {
+        try {
+            echo "Build Successful!"
+        } catch (err) {
+            echo "Build Failed!"
+        } finally {
+            echo "Cleaning workspace..."
+            cleanWs()
+        }
+    }
+}
