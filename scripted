@@ -2,7 +2,7 @@ node('day2') {
 
     // Tools
     def mvnHome = tool name: 'Maven-3.8.9'
-    def IMAGE_NAME = "eido00/python-iti-main-jenkins"
+    def IMAGE_NAME = "eido00/python-iti-main-scripted"
 
     try {
 
